@@ -294,15 +294,30 @@ class _AvailableOrdersList extends StatelessWidget {
                   onPressed: isTakingOrder && actionOrderId == order.id
                       ? null
                       : () async {
-                          final accepted = await context
-                              .read<OrdersCubit>()
-                              .takeOrder(order.id);
                           final orderId = order.id.trim();
-                          if (!accepted ||
-                              !context.mounted ||
-                              orderId.isEmpty) {
+                          debugPrint(
+                            '[ORDER_DEBUG] Take order tapped; order.id="${order.id}", sending="$orderId"',
+                          );
+                          if (orderId.isEmpty) {
+                            debugPrint(
+                              '[ORDER_DEBUG] Stop: order ID is empty.',
+                            );
                             return;
                           }
+
+                          final accepted = await context
+                              .read<OrdersCubit>()
+                              .takeOrder(orderId);
+                          debugPrint(
+                            '[ORDER_DEBUG] Take order result; orderId="$orderId", accepted=$accepted',
+                          );
+                          if (!accepted || !context.mounted) {
+                            return;
+                          }
+
+                          debugPrint(
+                            '[ORDER_DEBUG] Opening map with arguments: {orderId: "$orderId"}',
+                          );
                           Navigator.of(context).pushNamed(
                             AppRoutes.viewMap,
                             arguments: {'orderId': orderId},

@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/repositories/order_repository.dart';
 import 'customer_address_state.dart';
@@ -9,9 +10,12 @@ class CustomerAddressCubit extends Cubit<CustomerAddressState> {
   CustomerAddressCubit(this.repository) : super(const CustomerAddressState());
 
   Future<void> loadCustomerAddress(String orderId) async {
+    debugPrint(
+      '[ORDER_DEBUG] CustomerAddressCubit received orderId="${orderId.trim()}"',
+    );
     emit(const CustomerAddressState(isLoading: true));
 
-    final result = await repository.getCustomerAddress(orderId);
+    final result = await repository.getCustomerAddress(orderId.trim());
     result.fold(
       (failure) => emit(CustomerAddressState(errorMessage: failure.message)),
       (address) {

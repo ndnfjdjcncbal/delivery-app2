@@ -16,18 +16,21 @@ class CustomerAddressMapPage extends StatelessWidget {
 
   String _resolveOrderId(BuildContext context) {
     final arguments = ModalRoute.of(context)?.settings.arguments;
+    String? argumentOrderId;
 
     if (arguments is Map) {
       final value =
           arguments['orderId'] ?? arguments['orders_id'] ?? arguments['id'];
-      if (value != null) return value.toString().trim();
+      argumentOrderId = value?.toString();
+    } else if (arguments is String || arguments is int) {
+      argumentOrderId = arguments.toString();
     }
 
-    if (arguments is String) return arguments.trim();
-    if (arguments is int) return arguments.toString();
-    if (orderId != null) return orderId!.trim();
-    print(orderId);
-    return orderId!.trim();
+    final resolvedOrderId = (argumentOrderId ?? orderId ?? '').trim();
+    debugPrint(
+      '[ORDER_DEBUG] Map opened; routeArguments=$arguments, constructorOrderId=$orderId, resolvedOrderId="$resolvedOrderId"',
+    );
+    return resolvedOrderId;
   }
 
   @override

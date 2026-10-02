@@ -83,7 +83,7 @@ class DeliveryLocationCubit extends Cubit<DeliveryLocationState> {
           Geolocator.getPositionStream(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.high,
-              distanceFilter: 5,
+              distanceFilter: 1,
             ),
           ).listen(
             (position) {
@@ -110,8 +110,7 @@ class DeliveryLocationCubit extends Cubit<DeliveryLocationState> {
                   locationServiceDisabled: serviceDisabled,
                 ),
               );
-              unawaited(_positionSubscription?.cancel());
-              _positionSubscription = null;
+              close();
             },
           );
     } on LocationServiceDisabledException {
