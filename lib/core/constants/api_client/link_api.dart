@@ -15,7 +15,6 @@ class ApiConstants {
   static const String resetpass =
       "$Api/Delivery_app/auth/forgetpassword/resetpassword.php";
   ////////////////////////orders/////////////////////////
-
   static const String getavailableorders =
       "$Api/Delivery_app/orders/get_available_orders.php";
   static const String getmyorders =
@@ -26,4 +25,13 @@ class ApiConstants {
       "$Api/Delivery_app/orders/deliver_order.php";
   static const String getorderaddress =
       "$Api/Delivery_app/orders/get_order_address.php";
+  /////////////////////<Profile>///////////////////////////
+  static const String updateprofile =
+      "$Api/Delivery_app/profile/update_profile.php";
+  static const String updateimage =
+      "$Api/Delivery_app/profile/update_image.php";
+  static const String changepassword =
+      "$Api/Delivery_app/profile/change_password.php";
+  static const String updateordertraking =
+      "$Api/tracking/update_order_tracking.php";
 }

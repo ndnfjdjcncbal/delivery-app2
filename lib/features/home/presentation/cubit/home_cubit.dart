@@ -17,6 +17,10 @@ class HomeCubit extends Cubit<HomeState> {
     emit(state.copyWith(user: localUser ?? state.user, isLoading: false));
   }
 
+  void updateUserInState(User user) {
+    emit(state.copyWith(user: user));
+  }
+
   Future<void> logout() async {
     emit(state.copyWith(isLoading: true));
     await sl<AuthLocalDataSource>().clearUser();

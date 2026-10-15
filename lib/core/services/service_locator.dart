@@ -20,11 +20,26 @@ import '../../features/home/data/remote_data_source/order_remote_data_source.dar
 import '../../features/home/data/repositories/order_repository_impl.dart';
 import '../../features/home/domain/repositories/order_repository.dart';
 import '../../features/home/presentation/cubit/customer_address_cubit.dart';
+import '../../features/profile/data/remote_data_source/profile_remote_data_source.dart';
+import '../../features/profile/data/repositories/profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/profile_repository.dart';
+import '../../features/profile/domain/use_cases/change_password_usecase.dart';
+import '../../features/profile/domain/use_cases/update_profile_usecase.dart';
+import '../../features/profile/domain/use_cases/update_profile_image_usecase.dart';
+import '../../features/profile/presentation/cubit/profile_cubit.dart';
+import '../../features/tracking/data/data_sources/location_data_source.dart';
+import '../../features/tracking/data/data_sources/tracking_remote_data_source.dart';
+import '../../features/tracking/data/repositories/tracking_repository_impl.dart';
+import '../../features/tracking/domain/repositories/tracking_repository.dart';
+import '../../features/tracking/domain/use_cases/send_location.dart';
+import '../../features/tracking/domain/use_cases/start_tracking.dart';
+import '../../features/tracking/domain/use_cases/stop_tracking.dart';
+import '../../features/tracking/presentation/cubit/tracking_cubit.dart';
 import '../network/dio_consumer.dart';
 
 final sl = GetIt.instance;
 
-initDependencies() {
+void initDependencies() {
   sl.registerSingletonAsync<SharedPreferences>(
     () async => await SharedPreferences.getInstance(),
   );
@@ -38,6 +53,32 @@ initDependencies() {
   );
   sl.registerLazySingleton<OrderRepository>(
     () => OrderRepositoryImpl(sl<OrderRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<LocationDataSource>(() => LocationDataSource());
+  sl.registerLazySingleton<TrackingRemoteDataSource>(
+    () => TrackingRemoteDataSource(sl<DioConsumer>()),
+  );
+  sl.registerLazySingleton<TrackingRepository>(
+    () => TrackingRepositoryImpl(
+      sl<LocationDataSource>(),
+      sl<TrackingRemoteDataSource>(),
+    ),
+  );
+  sl.registerLazySingleton<StartTracking>(
+    () => StartTracking(sl<TrackingRepository>()),
+  );
+  sl.registerLazySingleton<SendLocation>(
+    () => SendLocation(sl<TrackingRepository>()),
+  );
+  sl.registerLazySingleton<StopTracking>(
+    () => StopTracking(sl<TrackingRepository>()),
+  );
+  sl.registerFactory<TrackingCubit>(
+    () => TrackingCubit(
+      startTrackingUseCase: sl<StartTracking>(),
+      sendLocationUseCase: sl<SendLocation>(),
+      stopTrackingUseCase: sl<StopTracking>(),
+    ),
   );
   sl.registerFactory<CustomerAddressCubit>(
     () => CustomerAddressCubit(sl<OrderRepository>()),
@@ -58,12 +99,40 @@ initDependencies() {
     ),
   );
 
+  sl.registerLazySingleton<ProfileRemoteDataSource>(
+    () => ProfileRemoteDataSource(sl<DioConsumer>()),
+  );
+  sl.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(
+      sl<ProfileRemoteDataSource>(),
+      sl<AuthLocalDataSource>(),
+    ),
+  );
+
   sl.registerLazySingleton<RegisterUseCase>(
     () => RegisterUseCase(sl<AuthRepository>()),
   );
 
   sl.registerLazySingleton<LoginUseCase>(
     () => LoginUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<UpdateProfileUseCase>(
+    () => UpdateProfileUseCase(sl<ProfileRepository>()),
+  );
+  sl.registerLazySingleton<UpdateProfileImageUseCase>(
+    () => UpdateProfileImageUseCase(sl<ProfileRepository>()),
+  );
+  sl.registerLazySingleton<ChangePasswordUseCase>(
+    () => ChangePasswordUseCase(sl<ProfileRepository>()),
+  );
+  sl.registerFactory<ProfileCubit>(
+    () => ProfileCubit(
+      updateProfileUseCase: sl<UpdateProfileUseCase>(),
+      updateProfileImageUseCase: sl<UpdateProfileImageUseCase>(),
+      changePasswordUseCase: sl<ChangePasswordUseCase>(),
+      requestPasswordResetCodeUseCase:
+          sl<RequestPasswordResetCodeUseCase>(),
+    ),
   );
 
   sl.registerLazySingleton<RequestPasswordResetCodeUseCase>(

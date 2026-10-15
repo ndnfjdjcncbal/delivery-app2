@@ -4,14 +4,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_color/Colors.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/services/service_locator.dart';
-import '../../../auth/domain/entiti/entity_login.dart';
 import '../../../auth/domain/repo/auth_repo.dart';
 import '../../domain/entities/delivery_order.dart';
 import '../../domain/repositories/order_repository.dart';
+import '../../../profile/presentation/pages/profile_page.dart';
 import '../cubit/home_cubit.dart';
 import '../cubit/home_state.dart';
 import '../cubit/orders_cubit.dart';
 import '../cubit/orders_state.dart';
+import '../../../tracking/presentation/cubit/tracking_cubit.dart';
+import '../../../tracking/presentation/cubit/tracking_state.dart';
 
 class DeliveryHomePage extends StatelessWidget {
   const DeliveryHomePage({super.key});
@@ -35,6 +37,13 @@ class _DeliveryHomeView extends StatefulWidget {
 class _DeliveryHomeViewState extends State<_DeliveryHomeView> {
   int _selectedIndex = 0;
 
+  Future<void> _logout(BuildContext context) async {
+    await context.read<HomeCubit>().logout();
+    if (!context.mounted) return;
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<HomeCubit, HomeState>(
@@ -55,7 +64,11 @@ class _DeliveryHomeViewState extends State<_DeliveryHomeView> {
               index: _selectedIndex,
               children: [
                 const OrdersTabView(),
-                ProfileTabView(user: state.user!),
+                ProfilePage(
+                  user: state.user,
+                  onUserUpdated: context.read<HomeCubit>().updateUserInState,
+                  onLogout: () => _logout(context),
+                ),
               ],
             ),
             bottomNavigationBar: Container(
@@ -100,84 +113,96 @@ class OrdersTabView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: BlocConsumer<OrdersCubit, OrdersState>(
-        listener: (context, state) {
-          if (state.errorMessage != null) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(state.errorMessage!)));
-          }
-          if (state.successMessage != null) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(state.successMessage!)));
-          }
-        },
-        builder: (context, state) {
-          if (state.isLoading &&
-              state.availableOrders.isEmpty &&
-              state.myOrders.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return BlocConsumer<TrackingCubit, TrackingState>(
+      listener: (context, trackingState) {
+        if (trackingState is TrackingFailure) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(trackingState.message)));
+        }
+      },
+      builder: (context, trackingState) {
+        return SafeArea(
+          child: BlocConsumer<OrdersCubit, OrdersState>(
+            listener: (context, state) {
+              if (state.errorMessage != null) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+              }
+              if (state.successMessage != null) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.successMessage!)));
+              }
+            },
+            builder: (context, state) {
+              if (state.isLoading &&
+                  state.availableOrders.isEmpty &&
+                  state.myOrders.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return DefaultTabController(
-            length: 2,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Delivery Orders',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.black,
+              return DefaultTabController(
+                length: 2,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Delivery Orders',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.black,
+                              ),
+                            ),
                           ),
-                        ),
+                          IconButton(
+                            onPressed: () =>
+                                context.read<OrdersCubit>().loadOrders(),
+                            icon: const Icon(
+                              Icons.refresh_rounded,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        onPressed: () =>
-                            context.read<OrdersCubit>().loadOrders(),
-                        icon: const Icon(
-                          Icons.refresh_rounded,
-                          color: AppColors.primary,
-                        ),
+                    ),
+                    const TabBar(
+                      indicatorColor: AppColors.primary,
+                      labelColor: AppColors.primary,
+                      unselectedLabelColor: AppColors.grey,
+                      tabs: [
+                        Tab(text: 'Available'),
+                        Tab(text: 'My Orders'),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _AvailableOrdersList(
+                            orders: state.availableOrders,
+                            isTakingOrder: state.isTakingOrder,
+                            actionOrderId: state.actionOrderId,
+                          ),
+                          _MyOrdersList(
+                            orders: state.myOrders,
+                            isDeliveringOrder: state.isDeliveringOrder,
+                            actionOrderId: state.actionOrderId,
+                            trackingState: trackingState,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const TabBar(
-                  indicatorColor: AppColors.primary,
-                  labelColor: AppColors.primary,
-                  unselectedLabelColor: AppColors.grey,
-                  tabs: [
-                    Tab(text: 'Available'),
-                    Tab(text: 'My Orders'),
+                    ),
                   ],
                 ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _AvailableOrdersList(
-                        orders: state.availableOrders,
-                        isTakingOrder: state.isTakingOrder,
-                        actionOrderId: state.actionOrderId,
-                      ),
-                      _MyOrdersList(
-                        orders: state.myOrders,
-                        isDeliveringOrder: state.isDeliveringOrder,
-                        actionOrderId: state.actionOrderId,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -361,10 +386,12 @@ class _MyOrdersList extends StatelessWidget {
   final List<DeliveryOrder> orders;
   final bool isDeliveringOrder;
   final String? actionOrderId;
+  final TrackingState trackingState;
 
   const _MyOrdersList({
     required this.orders,
     required this.isDeliveringOrder,
+    required this.trackingState,
     this.actionOrderId,
   });
 
@@ -380,6 +407,19 @@ class _MyOrdersList extends StatelessWidget {
       itemBuilder: (context, index) {
         final order = orders[index];
         final isDelivered = order.status == 4;
+        final isTrackingThisOrder = switch (trackingState) {
+          TrackingActive(:final orderId) => orderId == order.id,
+          _ => false,
+        };
+        final isStartingThisOrder = switch (trackingState) {
+          TrackingStarting(:final orderId) => orderId == order.id,
+          _ => false,
+        };
+        final isAnyTrackingStarting = trackingState is TrackingStarting;
+        final activeTrackingOrderId = switch (trackingState) {
+          TrackingActive(:final orderId) => orderId,
+          _ => null,
+        };
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -472,12 +512,64 @@ class _MyOrdersList extends StatelessWidget {
               if (!isDelivered)
                 SizedBox(
                   width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed:
+                        isTrackingThisOrder ||
+                            isAnyTrackingStarting ||
+                            trackingState is TrackingActive
+                        ? null
+                        : () => context.read<TrackingCubit>().start(order.id),
+                    icon: isStartingThisOrder
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            isTrackingThisOrder
+                                ? Icons.my_location
+                                : Icons.location_searching,
+                            size: 18,
+                          ),
+                    label: Text(
+                      isStartingThisOrder
+                          ? 'جاري بدء مشاركة الموقع...'
+                          : isTrackingThisOrder
+                          ? 'مشاركة الموقع نشطة'
+                          : 'بدء توصيل الطلب ومشاركة الموقع',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      minimumSize: const Size.fromHeight(48),
+                      side: const BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              if (!isDelivered) const SizedBox(height: 10),
+              if (!isDelivered)
+                SizedBox(
+                  width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: isDeliveringOrder && actionOrderId == order.id
                         ? null
-                        : () => context.read<OrdersCubit>().deliverOrder(
-                            order.id,
-                          ),
+                        : trackingState is TrackingStarting
+                        ? null
+                        : activeTrackingOrderId != null &&
+                              activeTrackingOrderId != order.id
+                        ? null
+                        : () async {
+                            final locationSent = await context
+                                .read<TrackingCubit>()
+                                .stopAndSendDelivered(order.id);
+                            if (locationSent && context.mounted) {
+                              await context.read<OrdersCubit>().deliverOrder(
+                                order.id,
+                              );
+                            }
+                          },
                     icon: isDeliveringOrder && actionOrderId == order.id
                         ? const SizedBox(
                             width: 18,
@@ -532,79 +624,6 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class ProfileTabView extends StatelessWidget {
-  final User? user;
-
-  const ProfileTabView({super.key, this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            CircleAvatar(
-              radius: 42,
-              backgroundColor: AppColors.primaryPale,
-              child: const Icon(
-                Icons.person_rounded,
-                size: 42,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              user?.name ?? 'Delivery User',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              user?.email ?? 'No email found',
-              style: const TextStyle(color: AppColors.grey),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              user?.phone ?? 'No phone',
-              style: const TextStyle(color: AppColors.grey),
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await context.read<HomeCubit>().logout();
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      AppRoutes.login,
-                      (route) => false,
-                    );
-                  }
-                },
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('Logout'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

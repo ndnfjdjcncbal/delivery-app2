@@ -27,7 +27,15 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your location is used to show your live position while delivering an order.</string>
+	<string>يُستخدم موقعك لمشاركته مباشرةً أثناء توصيل الطلب، حتى عند تشغيل التطبيق في الخلفية.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>يلزم الوصول إلى موقعك في الخلفية لمشاركة موقع التوصيل المباشر أثناء استخدام تطبيقات أخرى.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>يلزم الوصول إلى موقعك في الخلفية لمشاركة موقع التوصيل المباشر أثناء استخدام تطبيقات أخرى.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
